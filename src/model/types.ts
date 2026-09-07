@@ -31,6 +31,7 @@ export interface DeckConfig {
   newPerDay: number; revPerDay: number;
   learnSteps: number[]; relearnSteps: number[]; // minutes
   graduatingIvl: number; easyIvl: number; startEase: number; maxIvl: number;
+  hardMult: number; easyMult: number; lapseMult: number; ivlMult: number; minLapseIvl: number; leechThreshold: number;
   fsrs: boolean; fsrsParams: number[]; desiredRetention: number;
 }
 export interface Collection { crt: number; rollover: number; fsrs: boolean }

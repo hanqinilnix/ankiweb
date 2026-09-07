@@ -17,7 +17,7 @@ function toF(c: Card, cfg: DeckConfig, col: Collection, now: Date): FCard {
   return {
     due, stability: c.fsrs?.s ?? 0, difficulty: c.fsrs?.d ?? 0,
     elapsed_days: last ? Math.max(0, today(col, now) - (c.due - c.ivl)) : 0, scheduled_days: review ? c.ivl : 0,
-    learning_steps: c.type === CardType.New ? 0 : Math.max(0, steps.length - c.left), reps: c.reps, lapses: c.lapses,
+    learning_steps: c.type === CardType.New || review ? 0 : Math.max(0, steps.length - c.left), reps: c.reps, lapses: c.lapses,
     state: c.type as unknown as State, last_review: last,
   };
 }

@@ -38,6 +38,8 @@ function read11(col: Record<string, unknown>) {
     learnSteps: c.new?.delays ?? [1, 10], relearnSteps: c.lapse?.delays ?? [10],
     graduatingIvl: num(c.new?.ints?.[0], 1), easyIvl: num(c.new?.ints?.[1], 4),
     startEase: num(c.new?.initialFactor, 2500) / 1000, maxIvl: num(c.rev?.maxIvl, 36500),
+    hardMult: num(c.rev?.hardFactor, 1.2), easyMult: num(c.rev?.ease4, 1.3), lapseMult: num(c.lapse?.mult, 0), ivlMult: num(c.rev?.ivlFct, 1),
+    minLapseIvl: num(c.lapse?.minInt, 1), leechThreshold: num(c.lapse?.leechFails, 8),
     fsrs: false, fsrsParams: c.fsrsParams6 ?? c.fsrsParams5 ?? c.fsrsWeights ?? [], desiredRetention: num(c.desiredRetention, 0.9),
   }));
   return { notetypes, decks, dconf };
@@ -77,6 +79,8 @@ function read18(db: Database) {
       learnSteps: floats(c, 1), relearnSteps: floats(c, 2),
       graduatingIvl: int(c, 18, 1), easyIvl: int(c, 19, 4),
       startEase: f32(c, 11, 2.5), maxIvl: int(c, 16, 36500),
+      hardMult: f32(c, 13, 1.2), easyMult: f32(c, 12, 1.3), lapseMult: f32(c, 14, 0), ivlMult: f32(c, 15, 1),
+      minLapseIvl: int(c, 17, 1), leechThreshold: int(c, 22, 8),
       fsrs: false, fsrsParams: p, desiredRetention: f32(c, 37, 0.9),
     };
   });

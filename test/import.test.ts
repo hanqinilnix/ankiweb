@@ -26,6 +26,7 @@ describe.each([['schema11', apkg11, 11], ['schema18', apkg18, 18]] as const)('%s
     const c = p.dconf[0]!;
     expect([c.newPerDay, c.revPerDay, c.learnSteps, c.relearnSteps, c.graduatingIvl, c.easyIvl, c.maxIvl]).toEqual([20, 200, [1, 10], [10], 1, 4, 36500]);
     expect(c.startEase).toBeCloseTo(2.5);
+    expect([c.hardMult, c.easyMult, c.lapseMult, c.ivlMult, c.minLapseIvl, c.leechThreshold].map((x) => +x.toFixed(2))).toEqual([1.2, 1.3, 0, 1, 1, 8]);
     expect(c.desiredRetention).toBeCloseTo(0.9);
     expect(p.notes.map((n) => [n.guid, n.fields.length, n.tags])).toEqual([['g-basic-1', 2, ['t1', 't2']], ['g-cloze-1', 2, []]]);
     expect(p.cards).toHaveLength(3);

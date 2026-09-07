@@ -16,7 +16,7 @@ const clozeModel = {
   flds: [{ name: 'Text', ord: 0 }, { name: 'Extra', ord: 1 }],
   tmpls: [{ name: 'Cloze', ord: 0, qfmt: '{{cloze:Text}}', afmt: '{{cloze:Text}}<br>{{Extra}}' }],
 };
-const dconf = { id: 1, name: 'Default', new: { perDay: 20, delays: [1, 10], ints: [1, 4], initialFactor: 2500 }, rev: { perDay: 200, maxIvl: 36500 }, lapse: { delays: [10] }, desiredRetention: 0.9 };
+const dconf = { id: 1, name: 'Default', new: { perDay: 20, delays: [1, 10], ints: [1, 4], initialFactor: 2500 }, rev: { perDay: 200, maxIvl: 36500, hardFactor: 1.2, ease4: 1.3, ivlFct: 1 }, lapse: { delays: [10], mult: 0, minInt: 1, leechFails: 8 }, desiredRetention: 0.9 };
 
 export const notes = [
   { id: 101, guid: 'g-basic-1', mid: 1, flds: 'Hello<img src="pic.png">\x1fWorld [sound:hi.mp3]', tags: ' t1 t2 ' },
@@ -86,6 +86,7 @@ export async function apkg18(): Promise<Uint8Array> {
   d.run('insert into deck_config values(1,"Default",0,0,?)', [enc([
     { n: 1, v: [1, 10], kind: 'floats' }, { n: 2, v: [10], kind: 'floats' }, { n: 9, v: 20 }, { n: 10, v: 200 },
     { n: 11, v: 2.5, kind: 'float' }, { n: 16, v: 36500 }, { n: 18, v: 1 }, { n: 19, v: 4 }, { n: 37, v: 0.9, kind: 'float' },
+    { n: 12, v: 1.3, kind: 'float' }, { n: 13, v: 1.2, kind: 'float' }, { n: 14, v: 0, kind: 'float' }, { n: 15, v: 1, kind: 'float' }, { n: 17, v: 1 }, { n: 22, v: 8 },
     { n: 6, v: Array.from({ length: 21 }, (_, i) => 0.1 * (i + 1)), kind: 'floats' },
   ])]);
   const mediaMap = enc(Object.keys(media).map((n, i) => ({ n: 1, v: enc([{ n: 1, v: n }, { n: 255, v: i }]) })));

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CardType, Queue, Rating, type Card, type Collection, type DeckConfig } from '../src/model/types';
-import { sm2 } from '../src/scheduler/sm2';
+import { makeSm2, sm2 as fuzzed } from '../src/scheduler/sm2';
+const sm2 = makeSm2({ fuzz: false });
 import { fsrs } from '../src/scheduler/fsrs';
 import { isDue, pick, today } from '../src/scheduler';
 
@@ -8,7 +9,7 @@ const col: Collection = { crt: 1_700_000_000, rollover: 4, fsrs: false };
 const now = new Date((col.crt + 10 * 86400 + 3600) * 1000); // day 10
 const cfg: DeckConfig = {
   id: 1, name: 'd', newPerDay: 20, revPerDay: 200, learnSteps: [1, 10], relearnSteps: [10],
-  graduatingIvl: 1, easyIvl: 4, startEase: 2.5, maxIvl: 36500, fsrs: false, fsrsParams: [], desiredRetention: 0.9,
+  graduatingIvl: 1, easyIvl: 4, startEase: 2.5, maxIvl: 36500, hardMult: 1.2, easyMult: 1.3, lapseMult: 0, ivlMult: 1, minLapseIvl: 1, leechThreshold: 8, fsrs: false, fsrsParams: [], desiredRetention: 0.9,
 };
 const base: Card = { id: 1, nid: 1, did: 1, ord: 0, type: CardType.New, queue: Queue.New, due: 0, ivl: 0, factor: 0, reps: 0, lapses: 0, left: 0, odue: 0, odid: 0, flags: 0 };
 const review: Card = { ...base, type: CardType.Review, queue: Queue.Review, due: 10, ivl: 5, factor: 2500, reps: 3 };
@@ -23,7 +24,7 @@ it('today / isDue', () => {
 describe('sm2', () => {
   it.each([
     [Rating.Again, Queue.Learn, 60, 2],
-    [Rating.Hard, Queue.Learn, 60, 2],
+    [Rating.Hard, Queue.Learn, 330, 2],
     [Rating.Good, Queue.Learn, 600, 1],
   ])('new card rating %i', (r, queue, secs, left) => {
     const { card } = sm2.answer(base, r, cfg, col, now, 1000);
@@ -56,8 +57,24 @@ describe('sm2', () => {
     expect([card.type, card.queue, card.lapses, card.factor, card.ivl]).toEqual([CardType.Relearn, Queue.Learn, 1, 2300, 1]);
     expect(revlog.type).toBe(1);
   });
+  it('fuzz stays within bounds and is deterministic', () => {
+    const big = { ...review, ivl: 30, due: 10 };
+    const a = fuzzed.answer(big, Rating.Good, cfg, col, now, 0).card.ivl;
+    expect(a).toBe(fuzzed.answer(big, Rating.Good, cfg, col, now, 0).card.ivl);
+    expect(a).toBeGreaterThanOrEqual(69); expect(a).toBeLessThanOrEqual(81); // 75 +- fuzz delta 5.7
+  });
+  it('early review uses elapsed days', () => {
+    const early = { ...review, due: 14 }; // 4 days early, elapsed 1
+    const { card } = sm2.answer(early, Rating.Good, cfg, col, now, 0);
+    expect(card.ivl).toBe(5);
+  });
+  it('leech flag at threshold', () => {
+    let c = { ...review, lapses: 7 };
+    c = sm2.answer(c, Rating.Again, cfg, col, now, 0).card;
+    expect(c.lapses).toBe(8); expect(c.flags & 0x80).toBeTruthy();
+  });
   it('preview strings', () => {
-    expect(sm2.preview(base, cfg, col, now)).toEqual({ 1: '1m', 2: '1m', 3: '10m', 4: '4d' });
+    expect(sm2.preview(base, cfg, col, now)).toEqual({ 1: '1m', 2: '6m', 3: '10m', 4: '4d' });
     expect(sm2.preview(review, cfg, col, now)[Rating.Good]).toBe('13d');
   });
 });
@@ -67,7 +84,7 @@ describe('fsrs', () => {
   const fcol = { ...col, fsrs: true };
   it('picked when enabled', () => {
     expect(pick(fcfg, fcol)).toBe(fsrs);
-    expect(pick(cfg, fcol)).toBe(sm2);
+    expect(pick(cfg, fcol)).toBe(fuzzed);
   });
   it('new card good enters learning with memory state', () => {
     const { card } = fsrs.answer(base, Rating.Good, fcfg, fcol, now, 0);
