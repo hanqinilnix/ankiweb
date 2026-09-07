@@ -98,6 +98,9 @@ test/fixtures/    small .apkg files covering: basic, cloze, media, anki21b/zstd,
   test with expected intervals.
 - Commit messages: conventional (`feat:`, `fix:`, `test:`, `chore:`).
 - Run `npm test` and `npm run typecheck` before declaring work done.
+- Fixtures are generated, not checked in as binaries: `test/helpers/fixtures.ts` builds schema 11 and 18
+  packages in memory; `npx tsx test/gen-fixtures.ts` writes them to `test/fixtures/` for manual import.
+- Browser check: `.claude/launch.json` starts Vite on 5173; drop `test/fixtures/basic18.apkg` on the Import page.
 - Do not add dependencies without a one-line justification in the PR/commit body.
 
 ## Out of scope (v1)
