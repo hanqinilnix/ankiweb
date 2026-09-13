@@ -34,7 +34,7 @@ export async function writeParsed(p: Parsed, onProgress: OnProgress = () => {}) 
   const tx = db.transaction(['col', 'notetypes', 'decks', 'dconf', 'notes', 'cards', 'revlog'], 'readwrite');
   if (!(await tx.objectStore('col').get('col'))) await tx.objectStore('col').put(p.col, 'col');
   for (const n of p.notetypes) await tx.objectStore('notetypes').put(n);
-  for (const d of p.decks) await tx.objectStore('decks').put(d);
+  for (const d of p.decks) { const ex = await tx.objectStore('decks').get(d.id); await tx.objectStore('decks').put(ex ? { ...d, common: ex.common, normal: ex.normal } : d); }
   for (const c of p.dconf) await tx.objectStore('dconf').put(c);
 
   const notes = tx.objectStore('notes'), cards = tx.objectStore('cards'), revlog = tx.objectStore('revlog');

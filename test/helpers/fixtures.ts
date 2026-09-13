@@ -16,7 +16,7 @@ const clozeModel = {
   flds: [{ name: 'Text', ord: 0 }, { name: 'Extra', ord: 1 }],
   tmpls: [{ name: 'Cloze', ord: 0, qfmt: '{{cloze:Text}}', afmt: '{{cloze:Text}}<br>{{Extra}}' }],
 };
-const dconf = { id: 1, name: 'Default', new: { perDay: 20, delays: [1, 10], ints: [1, 4], initialFactor: 2500 }, rev: { perDay: 200, maxIvl: 36500, hardFactor: 1.2, ease4: 1.3, ivlFct: 1 }, lapse: { delays: [10], mult: 0, minInt: 1, leechFails: 8 }, desiredRetention: 0.9 };
+const dconf = { id: 1, name: 'Default', new: { perDay: 20, delays: [1, 10], ints: [1, 4], initialFactor: 2500, bury: true }, rev: { perDay: 200, maxIvl: 36500, hardFactor: 1.2, ease4: 1.3, ivlFct: 1, bury: false }, lapse: { delays: [10], mult: 0, minInt: 1, leechFails: 8, leechAction: 1 }, maxTaken: 60, buryInterdayLearning: false, newGatherPriority: 0, newSortOrder: 0, reviewOrder: 0, newMix: 0, interdayLearningMix: 0, desiredRetention: 0.9 };
 
 export const notes = [
   { id: 101, guid: 'g-basic-1', mid: 1, flds: 'Hello<img src="pic.png">\x1fWorld [sound:hi.mp3]', tags: ' t1 t2 ' },
@@ -50,7 +50,7 @@ async function db(schema: string) {
   const d = new SQL.Database();
   d.run(schema);
   for (const n of notes) d.run('insert into notes values(?,?,?,?,?,?,?,?,?,?,?)', [n.id, n.guid, n.mid, 1_700_000_500, -1, n.tags, n.flds, '', 0, 0, '']);
-  for (const c of cards) d.run('insert into cards values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [c.id, c.nid, c.did, c.ord, 0, -1, c.type, c.queue, c.due, c.ivl, c.factor, c.reps, c.lapses, c.left, 0, 0, 0, c.data]);
+  for (const c of cards) d.run('insert into cards values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [c.id, c.nid, c.did, c.ord, 1_700_000_600, -1, c.type, c.queue, c.due, c.ivl, c.factor, c.reps, c.lapses, c.left, 0, 0, 0, c.data]);
   for (const r of revlog) d.run('insert into revlog values(?,?,?,?,?,?,?,?,?)', [r.id, r.cid, -1, r.ease, r.ivl, r.lastIvl, r.factor, r.time, r.type]);
   return d;
 }
@@ -61,9 +61,9 @@ const pack = (col: Uint8Array, name: string, mediaMap: Uint8Array) =>
 export async function apkg11(): Promise<Uint8Array> {
   const d = await db(SCHEMA11);
   d.run('insert into col values(1,?,0,0,11,0,0,0,?,?,?,?,"{}")', [
-    CRT, JSON.stringify({ rollover: 4 }),
+    CRT, JSON.stringify({ rollover: 4, creationOffset: -600, collapseTime: 1200 }),
     JSON.stringify({ 1: basicModel, 2: clozeModel }),
-    JSON.stringify({ 1: { id: 1, name: 'Default', conf: 1 }, 3: { id: 3, name: 'Default::Sub', conf: 1 } }),
+    JSON.stringify({ 1: { id: 1, name: 'Default', conf: 1, dyn: 0, newToday: [5, 2], revToday: [5, 3], lrnToday: [5, 0], timeToday: [5, 1000], extendNew: 0, extendRev: 0 }, 3: { id: 3, name: 'Default::Sub', conf: 1, dyn: 0, newToday: [0, 0], revToday: [0, 0], lrnToday: [0, 0], timeToday: [0, 0] } }),
     JSON.stringify({ 1: dconf }),
   ]);
   const mediaMap = te.encode(JSON.stringify(Object.fromEntries(Object.keys(media).map((n, i) => [String(i), n]))));
@@ -74,6 +74,7 @@ export async function apkg18(): Promise<Uint8Array> {
   const d = await db(SCHEMA18);
   d.run('insert into col values(1,?,0,0,18,0,0,0,"{}","{}","{}","{}","{}")', [CRT]);
   d.run('insert into config values("rollover",0,0,?)', [te.encode('4')]);
+  d.run('insert into config values("creationOffset",0,0,?)', [te.encode('-600')]);
   d.run('insert into config values("fsrs",0,0,?)', [te.encode('true')]);
   for (const m of [basicModel, clozeModel]) {
     d.run('insert into notetypes values(?,?,0,0,?)', [m.id, m.name, enc([{ n: 1, v: m.type }, { n: 3, v: m.css }])]);
@@ -81,12 +82,13 @@ export async function apkg18(): Promise<Uint8Array> {
     for (const t of m.tmpls) d.run('insert into templates values(?,?,?,0,0,?)', [m.id, t.ord, t.name, enc([{ n: 1, v: t.qfmt }, { n: 2, v: t.afmt }])]);
   }
   const kind = enc([{ n: 1, v: enc([{ n: 1, v: 1 }]) }]);
-  d.run('insert into decks values(1,"Default",0,0,?,?)', [enc([]), kind]);
+  const common = enc([{ n: 3, v: 5 }, { n: 4, v: 2 }, { n: 5, v: 3 }, { n: 7, v: 1000 }]);
+  d.run('insert into decks values(1,"Default",0,0,?,?)', [common, kind]);
   d.run('insert into decks values(3,?,0,0,?,?)', ['Default\x1fSub', enc([]), kind]);
   d.run('insert into deck_config values(1,"Default",0,0,?)', [enc([
     { n: 1, v: [1, 10], kind: 'floats' }, { n: 2, v: [10], kind: 'floats' }, { n: 9, v: 20 }, { n: 10, v: 200 },
     { n: 11, v: 2.5, kind: 'float' }, { n: 16, v: 36500 }, { n: 18, v: 1 }, { n: 19, v: 4 }, { n: 37, v: 0.9, kind: 'float' },
-    { n: 12, v: 1.3, kind: 'float' }, { n: 13, v: 1.2, kind: 'float' }, { n: 14, v: 0, kind: 'float' }, { n: 15, v: 1, kind: 'float' }, { n: 17, v: 1 }, { n: 22, v: 8 },
+    { n: 12, v: 1.3, kind: 'float' }, { n: 13, v: 1.2, kind: 'float' }, { n: 14, v: 0, kind: 'float' }, { n: 15, v: 1, kind: 'float' }, { n: 17, v: 1 }, { n: 22, v: 8 }, { n: 21, v: 1 }, { n: 24, v: 60 }, { n: 27, v: 1 },
     { n: 6, v: Array.from({ length: 21 }, (_, i) => 0.1 * (i + 1)), kind: 'floats' },
   ])]);
   const mediaMap = enc(Object.keys(media).map((n, i) => ({ n: 1, v: enc([{ n: 1, v: n }, { n: 255, v: i }]) })));

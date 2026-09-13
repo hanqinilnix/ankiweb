@@ -33,7 +33,7 @@ const td = new TextDecoder();
 export const str = (m: PbMsg, f: number, d = '') => { const v = m.get(f)?.[0]; return v instanceof Uint8Array ? td.decode(v) : d; };
 export const int = (m: PbMsg, f: number, d = 0) => { const v = m.get(f)?.[0]; return typeof v === 'bigint' ? Number(v) : typeof v === 'number' ? v : d; };
 export const f32 = (m: PbMsg, f: number, d = 0) => { const v = m.get(f)?.[0]; return typeof v === 'number' ? v : d; };
-export const sub = (m: PbMsg, f: number) => { const v = m.get(f)?.[0]; return v instanceof Uint8Array ? decode(v) : new Map(); };
+export const sub = (m: PbMsg, f: number): PbMsg => { const v = m.get(f)?.[0]; return v instanceof Uint8Array ? decode(v) : new Map(); };
 export const subs = (m: PbMsg, f: number) => (m.get(f) ?? []).filter((v): v is Uint8Array => v instanceof Uint8Array).map(decode);
 // repeated float: packed (bytes) or unpacked (fixed32 each)
 export function floats(m: PbMsg, f: number): number[] {

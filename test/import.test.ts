@@ -22,8 +22,14 @@ describe.each([['schema11', apkg11, 11], ['schema18', apkg18, 18]] as const)('%s
       ['Basic', 0, 2, '{{Front}}'], ['Cloze', 1, 2, '{{cloze:Text}}'],
     ]);
     expect(p.notetypes[0]!.css).toContain('font-size');
-    expect(p.decks.map((d) => [d.name, d.confId, d.parentId])).toEqual([['Default', 1, undefined], ['Default::Sub', 1, 1]]);
     const c = p.dconf[0]!;
+    expect(p.decks.map((d) => [d.name, d.confId, d.parentId])).toEqual([['Default', 1, undefined], ['Default::Sub', 1, 1]]);
+    expect(p.decks[0]!.common).toMatchObject({ lastDayStudied: 5, newStudied: 2, reviewStudied: 3, msStudied: 1000 });
+    expect(p.decks[0]!.normal).toMatchObject({ extendNew: 0, extendReview: 0 });
+    expect(p.col.creationOffset).toBe(-600);
+    expect(p.col.learnAheadSecs).toBe(1200);
+    expect([c.leechAction, c.capAnswerSecs, c.buryNew, c.buryReviews]).toEqual([1, 60, true, false]);
+    expect(p.cards[0]!.mod).toBe(1_700_000_600);
     expect([c.newPerDay, c.revPerDay, c.learnSteps, c.relearnSteps, c.graduatingIvl, c.easyIvl, c.maxIvl]).toEqual([20, 200, [1, 10], [10], 1, 4, 36500]);
     expect(c.startEase).toBeCloseTo(2.5);
     expect([c.hardMult, c.easyMult, c.lapseMult, c.ivlMult, c.minLapseIvl, c.leechThreshold].map((x) => +x.toFixed(2))).toEqual([1.2, 1.3, 0, 1, 1, 8]);

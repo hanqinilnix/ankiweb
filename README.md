@@ -24,8 +24,9 @@ Enable Pages with source "GitHub Actions" in the repo settings once.
 ## License
 GNU AGPL v3 or later. See [LICENSE](LICENSE).
 
-`src/scheduler/sm2.ts` is a TypeScript port of the scheduler in
-[Anki](https://github.com/ankitects/anki) (`rslib/src/scheduler/states/`), copyright Ankitects Pty Ltd
-and contributors, AGPL-3.0-or-later. Package and database formats follow Anki's `rslib/src/import_export`
-and `rslib/src/storage`. FSRS scheduling uses [ts-fsrs](https://github.com/open-spaced-repetition/ts-fsrs) (MIT).
+Most of `src/scheduler/` and `src/render/` are TypeScript ports of [Anki](https://github.com/ankitects/anki)
+(`rslib/src/scheduler`, `rslib/src/template.rs`, `rslib/src/cloze.rs`, `rslib/src/typeanswer.rs`,
+`rslib/src/card_rendering`, `ts/reviewer`, `qt/aqt/reviewer.py`), copyright Ankitects Pty Ltd and
+contributors, AGPL-3.0-or-later. Each ported file names its upstream source in its header.
+`src/scheduler/fsrs.ts` ports the forward pass of [fsrs-rs](https://github.com/open-spaced-repetition/fsrs-rs) (BSD-3-Clause).
 This project is not affiliated with Ankitects.

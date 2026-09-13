@@ -24,3 +24,9 @@ footer .show { width: 100%; padding: 14px; }
 .ratings button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; }
 .ratings small { color: var(--muted); }
 .r1 { border-color: #c53030; } .r2 { border-color: #b7791f; } .r3 { border-color: #2f855a; } .r4 { border-color: #2b6cb0; }
+footer .counts { display: flex; justify-content: center; gap: 12px; margin-bottom: 6px; font-size: 14px; }
+footer .counts .cur { text-decoration: underline; }
+.congrats { flex-direction: column; padding: 24px; text-align: center; gap: 8px; }
+.congrats h2 { font-size: 18px; margin: 0; }
+.congrats input { width: 4em; margin: 0 6px; font: inherit; }
+.congrats button { margin: 0 4px; }

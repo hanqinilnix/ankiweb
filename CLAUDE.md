@@ -5,9 +5,13 @@ Offline-first PWA that opens on iOS Safari (Add to Home Screen) and desktop. Imp
 collections (.apkg / .colpkg) from local files, iCloud Drive, or Google Drive, and lets the user
 review cards with Anki-faithful scheduling. Not a full Anki clone: no sync server, no add-on system.
 
-Reference implementation: https://github.com/ankitects/anki (AGPL). Read it for formats and
-scheduler behaviour; do not copy code verbatim unless we accept AGPL for this repo (we do, keep the
-LICENSE file AGPL-3.0 and attribute).
+Reference implementation: https://github.com/ankitects/anki (AGPL). This repo is AGPL-3.0 and
+public, so port Anki code directly rather than reinventing it. Rule: for any behaviour Anki already
+has, find the upstream module, port it file-for-file (same function names, same order of operations,
+same test cases), and put the upstream path + Ankitects copyright header at the top of the TS file.
+Deviate only where the browser forces it (no SQLite as live store, no Rust RNG, no blake3) and say so
+in a comment. Keep a shallow clone of upstream handy for reading:
+`git clone --depth 1 https://github.com/ankitects/anki` (outside the repo).
 
 ## Stack (decided, do not relitigate)
 - TypeScript, Vite, React 19, vanilla CSS. No UI framework.
@@ -20,18 +24,33 @@ LICENSE file AGPL-3.0 and attribute).
 - Tests: Vitest. Scheduler and importer must be unit-tested against fixtures in `test/fixtures/`.
 - No backend. Google Drive access is browser-side OAuth only.
 
-## Layout
+## Layout (with upstream source each file ports)
 ```
 src/
   app/            routing, shell, PWA registration
-  import/         apkg unpack, SQLite read, Anki schema -> our model
-  model/          TS types for Deck, Note, NoteType, Card, RevlogEntry, Config
-  store/          IndexedDB access layer (idb), migrations
-  scheduler/      FSRS + legacy SM-2 port, pure functions, no IO
-  render/         card template rendering ({{Field}}, {{cloze:}}, {{hint:}}, {{type:}}), media URLs
+  import/         apkg unpack, SQLite read, schema 11/18 -> our model (rslib/src/import_export, decks/schema11.rs, deckconfig/schema11.rs)
+  model/          TS types mirroring anki_proto (Deck.Common/Normal, DeckConfig enums, Card, RevlogEntry)
+  store/          IndexedDB (idb); queries.ts = deck tree counts, queue cache, answer side effects, bury/unbury, custom study
+  scheduler/
+    timing.ts     rslib/src/scheduler/timing.rs
+    states.ts     rslib/src/scheduler/states/{new,learning,review,relearning,steps,fuzz,interval_kind}.rs
+    fsrs.ts       fsrs-rs 6.6.2 inference/model forward pass (next_states, memory_state_from_sm2)
+    answering.ts  rslib/src/scheduler/answering/{mod,current,learning,review,relearning,revlog}.rs
+    queue.ts      rslib/src/scheduler/queue/builder/* + storage/card ordering SQL
+    limits.ts     rslib/src/decks/{limits,counts,stats}.rs, custom_study extend limits
+    fnv.ts        fnvhash SQL function (FNV-1a over i64 words)
+    timespan.ts   rslib/src/scheduler/timespan.rs (answer button labels)
+  render/
+    template.ts   rslib/src/template.rs + template_filters.rs
+    cloze.ts      rslib/src/cloze.rs
+    text.ts       rslib/src/text.rs (strip_html, entities, field_is_empty)
+    typeanswer.ts rslib/src/typeanswer.rs + difflib SequenceMatcher
+    avtags.ts     rslib/src/card_rendering/{parser,writer}.rs, aqt/sound.py play icons
+    reviewer.ts   ts/reviewer/index.ts (as injected iframe script) + reviewer.scss/webview.scss
+    card.ts       aqt/reviewer.py typeAns filters, media -> blob URLs, iframe srcdoc
   cloud/          providers: local file picker, iCloud (via Files picker), Google Drive
   ui/             React components
-test/fixtures/    small .apkg files covering: basic, cloze, media, anki21b/zstd, FSRS-enabled
+test/             ports of the upstream #[cfg(test)] modules for each file above; fixtures generated in helpers/
 ```
 
 ## Anki format facts (verify against upstream before changing)
@@ -59,11 +78,15 @@ test/fixtures/    small .apkg files covering: basic, cloze, media, anki21b/zstd,
   `rslib/src/cloze.rs`. Schema SQL in `rslib/src/storage/schema*.sql`.
 
 ## Scheduler
-- Default to FSRS (Anki 23.10+ default). Port from `rslib/src/scheduler/fsrs/` or use the
-  `ts-fsrs` package if its output matches upstream within tolerance on fixtures. Decide by test.
-- Also implement SM-2 ("v3 scheduler" behaviour) for collections without FSRS state so imported
-  intervals continue sanely. Keep both behind one `Scheduler` interface.
-- Scheduler functions are pure: `(card, revlog, config, now) -> next states`. No Date.now() inside.
+- Same state machine as Anki: `currentCardState` -> `nextStates` -> `answerCard` applies the chosen
+  state and produces the revlog entry. FSRS is switched on by the collection `fsrs` flag and feeds
+  `fsrsNextStates` into the same state code, exactly like rslib.
+- `ts-fsrs` is installed but unused for scheduling; `scheduler/fsrs.ts` ports fsrs-rs directly so
+  intervals match desktop Anki. Cards with no memory state fall back to `memory_state_from_sm2`
+  (Anki rebuilds from revlog; that is a TODO).
+- Known deviations: fuzz RNG stream differs from Rust `StdRng` (same seed, same bounds); learning
+  fuzz likewise; load balancer, easy days, filtered decks, custom data are not ported.
+- Scheduler functions are pure: no Date.now() inside; `store/queries.ts` supplies `now`.
 - Write `revlog` entries on every answer; never mutate history.
 
 ## Import sources
@@ -101,6 +124,7 @@ test/fixtures/    small .apkg files covering: basic, cloze, media, anki21b/zstd,
 - Fixtures are generated, not checked in as binaries: `test/helpers/fixtures.ts` builds schema 11 and 18
   packages in memory; `npx tsx test/gen-fixtures.ts` writes them to `test/fixtures/` for manual import.
 - Browser check: `.claude/launch.json` starts Vite on 5173; drop `test/fixtures/basic18.apkg` on the Import page.
+  The card iframe is sandboxed (no same-origin), so drive it via postMessage; it echoes `{shown, text}`.
 - Do not add dependencies without a one-line justification in the PR/commit body.
 
 ## Out of scope (v1)

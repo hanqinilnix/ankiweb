@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { Collection } from '../model/types';
-import { deckRows, type DeckRow } from '../store/queries';
+import { deckTree, type DeckRow } from '../store/queries';
 
 export function DeckList({ col, onStudy, onImport }: { col: Collection; onStudy: (id: number, name: string) => void; onImport: () => void }) {
   const [rows, setRows] = useState<DeckRow[]>();
-  useEffect(() => { deckRows(col, new Date()).then(setRows); }, [col]);
+  useEffect(() => { deckTree(col, new Date()).then(setRows); }, [col]);
   return (
     <div className="page">
       <header><h1>Decks</h1><button onClick={onImport}>Import</button></header>
