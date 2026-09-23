@@ -36,3 +36,17 @@ footer .counts .cur { text-decoration: underline; }
 .gdrive-config { display: flex; flex-direction: column; gap: 8px; }
 .gdrive-config input { font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); }
 .gdrive-config p { font-size: 14px; }
+.decks li .name, .decks li .counts { cursor: pointer; }
+.decks .gear { padding: 4px 8px; margin-left: 10px; border: 0; font-size: 16px; color: var(--muted); background: none; }
+.options .body { padding: 12px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.options h2 { font-size: 15px; margin: 12px 0 0; color: var(--muted); font-weight: 600; }
+.options .field { border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.options .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 10px; }
+.options .tabs button { padding: 8px 4px; font-size: 13px; }
+.options .tabs button.on { border-color: var(--accent); color: var(--accent); }
+.options .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.options .row input { width: 5em; font: inherit; padding: 8px; text-align: right; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); }
+.options .hint { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+.options .warn { margin: 6px 0 0; font-size: 13px; color: #b7791f; }
+.options .switch { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+header .primary { border-color: var(--accent); color: var(--accent); }

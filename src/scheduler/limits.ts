@@ -80,3 +80,45 @@ export const statsDelta = (nw: number, rev: number, ms: number) => (c: DeckCommo
 // extend_limits: positive delta raises today's limit by lowering the "done today" count.
 export const extendDelta = (nw: number, rev: number) => (c: DeckCommon): DeckCommon =>
   ({ ...c, newStudied: c.newStudied - nw, reviewStudied: c.reviewStudied - rev });
+
+// ---- deck options: which scope a daily limit comes from ----
+// Mirrors the Preset / This deck / Today only tabs in Anki's deck options (ts/routes/deck-options).
+// Exactly one scope is active: choosing a scope clears the more specific overrides, the way
+// ValueTab.disable() nulls the other tabs.
+export type LimitScope = 'preset' | 'deck' | 'today';
+export type LimitKindName = 'new' | 'review';
+
+const deckOverride = (d: Deck, k: LimitKindName) => (k === 'new' ? d.normal.newLimit : d.normal.reviewLimit);
+const todayOverride = (d: Deck, k: LimitKindName) => (k === 'new' ? d.normal.newLimitToday : d.normal.reviewLimitToday);
+const presetLimit = (c: DeckConfig, k: LimitKindName) => (k === 'new' ? c.newPerDay : c.revPerDay);
+
+/** The scope in force today, and the number it resolves to. */
+export function activeLimit(deck: Deck, cfg: DeckConfig, kind: LimitKindName, today: number): { scope: LimitScope; value: number } {
+  const t = todayOverride(deck, kind);
+  if (t && t.today === today) return { scope: 'today', value: t.limit };
+  const d = deckOverride(deck, kind);
+  if (d !== undefined) return { scope: 'deck', value: d };
+  return { scope: 'preset', value: presetLimit(cfg, kind) };
+}
+
+/** Write `value` at `scope`, clearing the narrower overrides. Returns new copies. */
+export function setLimit(deck: Deck, cfg: DeckConfig, kind: LimitKindName, scope: LimitScope, value: number, today: number): { deck: Deck; cfg: DeckConfig } {
+  const v = Math.max(0, Math.round(value));
+  const normal = { ...deck.normal };
+  const next = { ...cfg };
+  if (kind === 'new') { normal.newLimit = undefined; normal.newLimitToday = undefined; }
+  else { normal.reviewLimit = undefined; normal.reviewLimitToday = undefined; }
+  if (scope === 'preset') { if (kind === 'new') next.newPerDay = v; else next.revPerDay = v; }
+  else if (scope === 'deck') { if (kind === 'new') normal.newLimit = v; else normal.reviewLimit = v; }
+  else { if (kind === 'new') normal.newLimitToday = { limit: v, today }; else normal.reviewLimitToday = { limit: v, today }; }
+  return { deck: { ...deck, normal }, cfg: next };
+}
+
+/** Lowest configured limit among ancestors, which caps this deck however it is set. */
+export function parentCap(deck: Deck, decks: Deck[], cfgs: Map<number, DeckConfig>, kind: LimitKindName, today: number): number | undefined {
+  const caps = decks
+    .filter((p) => p.id !== deck.id && deck.name.startsWith(p.name + '::'))
+    .map((p) => { const c = cfgs.get(p.confId); return c ? activeLimit(p, c, kind, today).value : undefined; })
+    .filter((v): v is number => v !== undefined);
+  return caps.length ? Math.min(...caps) : undefined;
+}

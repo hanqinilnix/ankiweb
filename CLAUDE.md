@@ -37,7 +37,8 @@ src/
     fsrs.ts       fsrs-rs 6.6.2 inference/model forward pass (next_states, memory_state_from_sm2)
     answering.ts  rslib/src/scheduler/answering/{mod,current,learning,review,relearning,revlog}.rs
     queue.ts      rslib/src/scheduler/queue/builder/* + storage/card ordering SQL
-    limits.ts     rslib/src/decks/{limits,counts,stats}.rs, custom_study extend limits
+    limits.ts     rslib/src/decks/{limits,counts,stats}.rs, custom_study extend limits,
+                  daily-limit scopes (ts/routes/deck-options DailyLimits + ValueTab)
     fnv.ts        fnvhash SQL function (FNV-1a over i64 words)
     timespan.ts   rslib/src/scheduler/timespan.rs (answer button labels)
   render/
@@ -135,9 +136,18 @@ test/             ports of the upstream #[cfg(test)] modules for each file above
   The card iframe is sandboxed (no same-origin), so drive it via postMessage; it echoes `{shown, text}`.
 - Do not add dependencies without a one-line justification in the PR/commit body.
 
+## Deck options
+- Daily limits use Anki's three scopes and only one is ever active: preset (`dconf`, shared by every
+  deck using it), this deck (`normal.newLimit` / `reviewLimit`), today only (`normal.newLimitToday` /
+  `reviewLimitToday`, stamped with the day number). Choosing a scope clears the narrower ones, which
+  is what `ValueTab.disable()` does upstream. `scheduler/limits.ts:{activeLimit,setLimit}` hold that
+  logic; the UI is `ui/DeckOptions.tsx`.
+- "Study more" on the congrats screen is separate: it raises today's allowance by lowering the
+  done-today counter (`extendDelta`), matching custom study.
+
 ## Out of scope (v1)
-AnkiWeb sync, add-ons, note editing beyond tags/flags, deck options UI beyond retention slider,
-image occlusion note type.
+AnkiWeb sync, add-ons, note editing beyond tags/flags, deck options beyond daily limits (no FSRS
+retention, learning steps, burying, or display order UI yet), image occlusion note type.
 
 ## Style (user rule)
 Concise everywhere: code, comments, docs, chat replies. No filler, no restating, no long explanations.

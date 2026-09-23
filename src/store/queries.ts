@@ -2,7 +2,7 @@
 // bury/unbury, custom study limit extension, congrats info. IO lives here; scheduler/ stays pure.
 import { CardType, Queue, Rating, type Card, type Collection, type Deck, type DeckConfig, type Note, type NoteType } from '../model/types';
 import { activeDecks, answerCard, anyBurying, applyStats, buildQueues, buryModeOf, describeNextStates, extendDelta, makeUpdater, nextEntry, popEntry, remainingLimits, requeueLearning, statsDelta, timingFor, type CardQueues, type SchedTimingToday, type Updater } from '../scheduler';
-import { capTo, type RemainingLimits } from '../scheduler/limits';
+import { activeLimit, capTo, parentCap, setLimit, type LimitScope, type RemainingLimits } from '../scheduler/limits';
 import { getDB } from './db';
 
 export const loadCol = async (): Promise<Collection | undefined> => (await getDB()).get('col', 'col');
@@ -207,4 +207,52 @@ export async function mediaUrl(name: string): Promise<string | undefined> {
   const u = URL.createObjectURL(m.blob);
   urlCache.set(name, u);
   return u;
+}
+
+export { activeLimit };
+
+// ---- deck options (daily limits) ----
+export interface DeckOptions {
+  deck: Deck; cfg: DeckConfig; today: number;
+  presetDeckCount: number;                       // decks sharing this preset, so preset edits are not a surprise
+  caps: { new?: number; review?: number };       // lowest ancestor limit, which overrides this deck's
+}
+export interface LimitEdit { scope: LimitScope; value: number }
+export interface DeckOptionsEdit {
+  new: LimitEdit; review: LimitEdit;
+  newCardsIgnoreReviewLimit: boolean; applyAllParentLimits: boolean;
+}
+
+export async function loadDeckOptions(deckId: number, col: Collection, now: Date): Promise<DeckOptions | undefined> {
+  const db = await getDB();
+  const deck = await db.get('decks', deckId);
+  if (!deck) return;
+  const cfg = (await db.get('dconf', deck.confId)) ?? (await db.getAll('dconf'))[0];
+  if (!cfg) return;
+  const decks = await db.getAll('decks');
+  const cfgs = new Map((await db.getAll('dconf')).map((c) => [c.id, c]));
+  const today = timingFor(col, now).daysElapsed;
+  return {
+    deck, cfg, today,
+    presetDeckCount: decks.filter((d) => d.confId === cfg.id).length,
+    caps: { new: parentCap(deck, decks, cfgs, 'new', today), review: parentCap(deck, decks, cfgs, 'review', today) },
+  };
+}
+
+export async function saveDeckOptions(deckId: number, col: Collection, now: Date, edit: DeckOptionsEdit): Promise<Collection> {
+  const loaded = await loadDeckOptions(deckId, col, now);
+  if (!loaded) return col;
+  const { today } = loaded;
+  let { deck, cfg } = loaded;
+  ({ deck, cfg } = setLimit(deck, cfg, 'new', edit.new.scope, edit.new.value, today));
+  ({ deck, cfg } = setLimit(deck, cfg, 'review', edit.review.scope, edit.review.value, today));
+  const db = await getDB();
+  const tx = db.transaction(['decks', 'dconf'], 'readwrite');
+  await tx.objectStore('decks').put(deck);
+  await tx.objectStore('dconf').put(cfg);
+  await tx.done;
+  const next: Collection = { ...col, newCardsIgnoreReviewLimit: edit.newCardsIgnoreReviewLimit, applyAllParentLimits: edit.applyAllParentLimits };
+  if (next.newCardsIgnoreReviewLimit !== col.newCardsIgnoreReviewLimit || next.applyAllParentLimits !== col.applyAllParentLimits) await saveCol(next);
+  clearQueues();
+  return next;
 }
