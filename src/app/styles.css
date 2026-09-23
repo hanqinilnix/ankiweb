@@ -30,3 +30,9 @@ footer .counts .cur { text-decoration: underline; }
 .congrats h2 { font-size: 18px; margin: 0; }
 .congrats input { width: 4em; margin: 0 6px; font: inherit; }
 .congrats button { margin: 0 4px; }
+.import .btn { display: block; padding: 14px; border: 1px solid var(--line); border-radius: 8px; text-align: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.import .btn.disabled { opacity: .4; }
+.import .status.error { color: #c53030; white-space: pre-wrap; }
+.gdrive-config { display: flex; flex-direction: column; gap: 8px; }
+.gdrive-config input { font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); }
+.gdrive-config p { font-size: 14px; }

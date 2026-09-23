@@ -90,11 +90,19 @@ test/             ports of the upstream #[cfg(test)] modules for each file above
 - Write `revlog` entries on every answer; never mutate history.
 
 ## Import sources
-- Local: `<input type="file" accept=".apkg,.colpkg">`. On iOS this opens the Files app, which
-  already exposes iCloud Drive, so iCloud needs no SDK. Also accept drag-and-drop on desktop.
+- Local: a real `<input type="file">` in the DOM driven by a `<label for>`. A scripted `.click()` on
+  a detached input does not reliably open the picker on iOS. On iOS the Files app also lists Google
+  Drive and Dropbox under Browse > Locations, so that one button covers every cloud provider.
+- Never set `accept` on iOS. Safari maps accept entries to UTIs, and `.apkg`/`.colpkg` are not
+  registered types, so every file greys out and nothing is selectable. `cloud/local.ts:acceptAttr`
+  returns '' there and the extension is validated after picking instead.
+- `import/run.ts` tries a module worker and falls back to a main-thread import when the worker will
+  not start (old iOS). A blocked worker used to look like the button doing nothing.
 - Google Drive: Google Identity Services (GIS) token client + Google Picker API, scope
   `drive.file` (per-file, no broad access). Download via `drive.files.get?alt=media`.
-  Client ID lives in `.env.local` as `VITE_GOOGLE_CLIENT_ID`; never commit it.
+  `prepareGDrive()` loads the scripts on mount so `requestAccessToken()` runs inside the click
+  handler; otherwise iOS blocks the OAuth popup. Client ID comes from `VITE_GOOGLE_CLIENT_ID` or,
+  for a static deploy, from localStorage via the in-app setup form. Never commit the id.
 - File System Access API is not available on iOS Safari. Do not depend on it.
 - Import is idempotent by `notes.guid` and card `(nid, ord)`. Re-import merges, never duplicates.
 - Large files: unzip and read in a Web Worker; stream media blobs into IndexedDB one at a time.

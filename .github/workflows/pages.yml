@@ -16,7 +16,12 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run build
-        env: { VITE_BASE: "/${{ github.event.repository.name }}/" }
+        env:
+          VITE_BASE: "/${{ github.event.repository.name }}/"
+          # Optional: set these repo secrets to bake in direct Google Drive access.
+          # Without them the app still reads Drive files through the iOS Files app.
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
       - id: deployment
